@@ -39,14 +39,14 @@ namespace RuleMSXSingleStockHedge
             RuleAction actionCreateHedgeOrder = rmsx.createAction("CreateHedgeOrder", new CreateHedgeOrder("BB"));
 
             Rule ruleStatusWorking = new Rule("StatusWorking", new StringEqualityRule("OrderStatus", "WORKING"));
-            Rule ruleHedgeExists = new Rule("HedgeExists", new GenericBooleanRule("HedgeExists", false));
+            Rule ruleHedgeRequired = new Rule("HedgeRequired", new GenericBooleanRule("HedgeRequired"));
             Rule ruleFilled50Percent = new Rule("Filled50Percent", new ExceedPercentageRule(50));
 
             ruleFilled50Percent.AddAction(actionCreateHedgeOrder);
 
             ruleSet.AddRule(ruleStatusWorking);
-            ruleStatusWorking.AddRule(ruleHedgeExists);
-            ruleHedgeExists.AddRule(ruleFilled50Percent);
+            ruleStatusWorking.AddRule(ruleHedgeRequired);
+            ruleHedgeRequired.AddRule(ruleFilled50Percent);
 
             System.Console.WriteLine(ruleSet.report());
 
@@ -89,7 +89,7 @@ namespace RuleMSXSingleStockHedge
             DataPoint orderStatus = rmsxTest.addDataPoint("OrderStatus", new EMSXFieldDataPoint(o.field("EMSX_STATUS")));
             DataPoint amount = rmsxTest.addDataPoint("TotalAmount", new EMSXFieldDataPoint(o.field("EMSX_AMOUNT")));
             DataPoint filled = rmsxTest.addDataPoint("FilledAmount", new EMSXFieldDataPoint(o.field("EMSX_FILLED")));
-            DataPoint hedgeExists = rmsxTest.addDataPoint("HedgeExists", new DynamicBoolDataPoint("HedgeExists", false));
+            DataPoint hedgeRequired = rmsxTest.addDataPoint("HedgeRequired", new DynamicBoolDataPoint("HedgeRequired", true));
 
             this.ruleSet.Execute(rmsxTest);
         }
@@ -197,7 +197,6 @@ namespace RuleMSXSingleStockHedge
             {
                 this.threshold = threshold; ;
                 this.addDependantDataPointName("FilledAmount");
-                this.addDependantDataPointName("HedgeExists");
             }
 
             public override bool Evaluate(DataSet dataSet)
@@ -215,12 +214,10 @@ namespace RuleMSXSingleStockHedge
         {
 
             string dataPointName;
-            bool target;
 
-            internal GenericBooleanRule(string dataPointName, bool target)
+            internal GenericBooleanRule(string dataPointName)
             {
                 this.dataPointName = dataPointName;
-                this.target = target;
                 this.addDependantDataPointName(dataPointName);
             }
 
@@ -229,8 +226,8 @@ namespace RuleMSXSingleStockHedge
                 String ord = (String) dataSet.getDataPoint("OrderNo").GetValue();
                 bool val = bool.Parse(dataSet.getDataPoint(this.dataPointName).GetValue().ToString());
                 System.Console.WriteLine("GenericBooleanRule dump: " + dataSet.report());
-                System.Console.WriteLine("GenericBooleanRule evaluating result for : " + val.ToString() + " == " + target.ToString() + ": result = " + (val == this.target).ToString());
-                return val == this.target;
+                System.Console.WriteLine("GenericBooleanRule evaluating result for : " + val.ToString());
+                return val;
             }
         }
 
@@ -246,8 +243,8 @@ namespace RuleMSXSingleStockHedge
             public void Execute(DataSet dataSet)
             {
                 
-                DynamicBoolDataPoint hedgeExists = (DynamicBoolDataPoint)dataSet.getDataPoint("HedgeExists").GetSource();
-                hedgeExists.setValue(true);
+                DynamicBoolDataPoint hedgeRequired = (DynamicBoolDataPoint)dataSet.getDataPoint("HedgeRequired").GetSource();
+                hedgeRequired.setValue(false);
                 System.Console.WriteLine("CreateHedgeOrder dump: " + dataSet.report());
                 System.Console.WriteLine("Created order to " + broker);
                 // Make CreateOrderAndRouteEx request for currency hedge.
