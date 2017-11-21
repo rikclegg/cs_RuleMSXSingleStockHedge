@@ -39,14 +39,14 @@ namespace RuleMSXSingleStockHedge
             RuleAction actionCreateHedgeOrder = rmsx.createAction("CreateHedgeOrder", new CreateHedgeOrder("BB"));
 
             Rule ruleStatusWorking = new Rule("StatusWorking", new StringEqualityRule("OrderStatus", "WORKING"));
+            Rule ruleFilled50Percent = new Rule("Filled50Percent", new PercentageRule(50));
             Rule ruleHedgeRequired = new Rule("HedgeRequired", new GenericBooleanRule("HedgeRequired"));
-            Rule ruleFilled50Percent = new Rule("Filled50Percent", new ExceedPercentageRule(50));
 
-            ruleFilled50Percent.AddAction(actionCreateHedgeOrder);
+            ruleHedgeRequired.AddAction(actionCreateHedgeOrder);
 
             ruleSet.AddRule(ruleStatusWorking);
-            ruleStatusWorking.AddRule(ruleHedgeRequired);
-            ruleHedgeRequired.AddRule(ruleFilled50Percent);
+            ruleStatusWorking.AddRule(ruleFilled50Percent);
+            ruleFilled50Percent.AddRule(ruleHedgeRequired);
 
             System.Console.WriteLine(ruleSet.report());
 
@@ -188,12 +188,12 @@ namespace RuleMSXSingleStockHedge
 
         }
 
-        class ExceedPercentageRule : RuleEvaluator
+        class PercentageRule : RuleEvaluator
         {
 
             float threshold;
 
-            internal ExceedPercentageRule(float threshold)
+            internal PercentageRule(float threshold)
             {
                 this.threshold = threshold; ;
                 this.addDependantDataPointName("FilledAmount");
@@ -206,7 +206,7 @@ namespace RuleMSXSingleStockHedge
                 float fillPercent = (filled / total) * 100;
                 System.Console.WriteLine("ExceedPercentageRule dump: " + dataSet.report());
                 System.Console.WriteLine("ExceedPercentageRule evaluating result for : " + fillPercent.ToString() + " > " + threshold.ToString() + ": result = " + (fillPercent > threshold).ToString());
-                return fillPercent > threshold;
+                return fillPercent >= threshold;
             }
         }
 
